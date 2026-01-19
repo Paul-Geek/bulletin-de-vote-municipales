@@ -3,167 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Bulletins de Vote - Final</title>
+    <title>Générateur de Bulletins de Vote</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Playfair+Display:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    
     <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { margin: 0; padding: 0; }
+            #ballot { 
+                border: none !important; 
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+        }
+        .print-only { display: none; }
+        
         .ballot-a5 { width: 210mm; height: 148mm; }
         .ballot-a4 { width: 297mm; height: 210mm; }
         
-        .draggable-image-container {
-            position: absolute;
-            cursor: move;
-            z-index: 50;
-            padding: 5px;
-        }
-
         .draggable-image {
-            display: block;
-            min-width: 20px;
-            max-width: 600px;
+            cursor: move;
+            position: absolute;
+            z-index: 10;
             border: 2px dashed transparent;
+            transition: border-color 0.2s;
+            min-width: 30px;
+            min-height: 30px;
+            /* Limite augmentée */
+            max-width: 800px; 
+            max-height: 800px;
+            object-fit: contain;
         }
-
-        .draggable-image-container:hover .draggable-image { border-color: #3b82f6; }
-
+        .draggable-image:hover { border-color: #3b82f6; }
+        .draggable-image.dragging { border-color: #ef4444; opacity: 0.8; }
+        
         .resize-handle {
             position: absolute;
-            right: -5px;
-            bottom: -5px;
-            width: 14px;
-            height: 14px;
-            background: #3b82f6;
-            border-radius: 50%;
-            cursor: se-resize;
-            display: none;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: -10px;
-            left: -10px;
             width: 20px;
             height: 20px;
-            background: #ef4444;
-            color: white;
+            background: #3b82f6;
+            border: 2px solid white;
             border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 60;
+            cursor: se-resize;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 11;
         }
-
-        .draggable-image-container:hover .resize-handle,
-        .draggable-image-container:hover .delete-btn { display: flex; }
-        
-        @media print { .no-print { display: none !important; } }
+        .draggable-image:hover + .resize-handle,
+        .resize-handle:hover { opacity: 1; }
     </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div class="container mx-auto max-w-5xl">
-        <div class="no-print bg-white rounded-xl shadow-lg p-6 mb-6 border-t-4 border-blue-600">
-            <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Configuration du Bulletin</h1>
-            
-            <div class="grid md:grid-cols-2 gap-8">
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto p-6 max-w-6xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">Générateur de Bulletins de Vote</h1>
+        
+        <div class="no-print bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="grid md:grid-cols-2 gap-6">
                 <div class="space-y-4">
-                    <div class="flex gap-4">
-                        <div class="flex-1">
-                            <label class="block text-xs font-bold uppercase text-gray-500">Nom de la liste</label>
-                            <input type="text" id="listName" class="w-full p-2 border rounded mt-1" placeholder="Ex: Ensemble pour la ville">
-                        </div>
-                        <div class="w-24">
-                            <label class="block text-xs font-bold uppercase text-gray-500">Taille</label>
-                            <input type="number" id="titleSize" value="30" class="w-full p-2 border rounded mt-1">
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nom de la liste</label>
+                        <input type="text" id="listName" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Entrez le nom de la liste">
                     </div>
-                    
-                    <label class="block text-xs font-bold uppercase text-gray-500">Candidats Municipaux</label>
-                    <textarea id="municipalCandidates" rows="5" class="w-full p-2 border rounded text-sm"></textarea>
-                    
-                    <label class="block text-xs font-bold uppercase text-gray-500">Candidats Communautaires (Optionnel)</label>
-                    <textarea id="communityCandidates" rows="3" class="w-full p-2 border rounded text-sm"></textarea>
-                    
-                    <div class="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        <input type="checkbox" id="showNumbers" checked class="w-4 h-4 text-blue-600">
-                        <label for="showNumbers" class="text-sm font-medium text-blue-900">Numéroter les candidats</label>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Candidats au conseil municipal</label>
+                        <textarea id="municipalCandidates" rows="8" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Candidats au conseil communautaire</label>
+                        <textarea id="communityCandidates" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                     </div>
                 </div>
-
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-500">Ajouter des images (Logos...)</label>
-                        <input type="file" id="imageUpload" accept="image/*" class="w-full text-sm mt-1 file:bg-blue-50 file:border-none file:px-4 file:py-2 file:rounded-full file:text-blue-700 file:font-bold hover:file:bg-blue-100 cursor-pointer">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Importer des visuels (PNG recommandés)</label>
+                        <input type="file" id="imageUpload" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-2">
+                        <div class="text-xs text-gray-600">Vous pouvez ajouter plusieurs images l'une après l'autre.</div>
                     </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-500">Police de caractères</label>
-                            <select id="fontFamily" class="w-full p-2 border rounded mt-1">
-                                <option value="Arial">Arial (Classique)</option>
-                                <option value="'Roboto'">Roboto (Moderne)</option>
-                                <option value="'Montserrat'">Montserrat (Gras)</option>
-                                <option value="'Playfair Display'">Playfair (Sérif)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-500">Taille Corps</label>
-                            <input type="number" id="fontSize" value="12" class="w-full p-2 border rounded mt-1">
-                        </div>
-                    </div>
-
+                    
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-500">Couleur (Texte & Images)</label>
-                        <div class="flex gap-2 mt-1">
-                            <input type="color" id="colorPicker" value="#000000" class="h-10 w-12 border rounded cursor-pointer">
-                            <button onclick="generateBallot()" class="flex-1 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">
-                                APPLIQUER LES MODIFICATIONS
-                            </button>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Police et taille</label>
+                        <div class="flex gap-2">
+                            <select id="fontFamily" class="flex-1 px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Helvetica">Helvetica</option>
+                            </select>
+                            <input type="number" id="fontSize" value="12" class="w-20 px-3 py-2 border border-gray-300 rounded-md">
                         </div>
                     </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Couleur du bulletin</label>
+                        <div class="flex space-x-2">
+                            <input type="color" id="colorPicker" value="#000000" class="w-16 h-10 border rounded cursor-pointer">
+                            <input type="text" id="colorHex" value="#000000" class="flex-1 px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    
+                    <button onclick="generateBallot()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md">
+                        Générer / Mettre à jour le texte
+                    </button>
                 </div>
             </div>
         </div>
-
-        <div id="ballotContainer" class="hidden">
-            <div class="no-print flex justify-between items-center mb-4 px-2">
-                <span class="text-sm text-gray-500">Déplacez les images à la souris. Le PDF sera au format exact (A4/A5).</span>
-                <button onclick="generatePDF()" class="bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-red-700 transition">💾 Télécharger PDF</button>
+        
+        <div id="ballotPreview" class="hidden">
+            <div class="no-print flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Aperçu</h2>
+                <div class="space-x-2">
+                    <button onclick="generatePDF()" class="bg-red-600 text-white px-4 py-2 rounded-md">PDF</button>
+                    <button onclick="location.reload()" class="bg-gray-600 text-white px-4 py-2 rounded-md">Réinitialiser</button>
+                </div>
             </div>
             
-            <div id="ballot" class="bg-white mx-auto relative shadow-2xl overflow-hidden" style="border: 1px solid #ddd;">
+            <div id="ballot" class="bg-white border-2 border-gray-300 mx-auto relative overflow-hidden">
                 </div>
         </div>
     </div>
 
     <script>
-        // Traitement de l'image (colorisation)
+        let uploadedImages = [];
+        let activeImg = null;
+        let isDragging = false;
+        let isResizing = false;
+        let dragOffset = { x: 0, y: 0 };
+        let resizeStartSize = { w: 0, h: 0 };
+        let resizeStartPos = { x: 0, y: 0 };
+
+        // Upload d'images multiples
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgData = e.target.result;
+                    uploadedImages.push(imgData);
+                    if (document.getElementById('ballotPreview').classList.contains('hidden')) {
+                        generateBallot();
+                    } else {
+                        addNewImageToBallot(imgData);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function getCurrentColor() {
+            return document.getElementById('colorPicker').value;
+        }
+
+        // Application de la couleur via Canvas
         function applyColorToImage(img, color) {
-            if (!img.dataset.originalSrc) return;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             const tempImg = new Image();
             tempImg.crossOrigin = "anonymous";
+            
+            if (!img.dataset.originalSrc) img.dataset.originalSrc = img.src;
+            
             tempImg.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
                 canvas.width = tempImg.naturalWidth;
                 canvas.height = tempImg.naturalHeight;
                 ctx.drawImage(tempImg, 0, 0);
+                
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const rgb = {
+                const data = imageData.data;
+                const target = {
                     r: parseInt(color.substr(1, 2), 16),
                     g: parseInt(color.substr(3, 2), 16),
                     b: parseInt(color.substr(5, 2), 16)
                 };
-                for (let i = 0; i < imageData.data.length; i += 4) {
-                    const brightness = (imageData.data[i] * 0.299 + imageData.data[i+1] * 0.587 + imageData.data[i+2] * 0.114) / 255;
-                    imageData.data[i] = rgb.r + (255 - rgb.r) * brightness;
-                    imageData.data[i+1] = rgb.g + (255 - rgb.g) * brightness;
-                    imageData.data[i+2] = rgb.b + (255 - rgb.b) * brightness;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114) / 255;
+                    data[i] = target.r + (255 - target.r) * brightness;
+                    data[i+1] = target.g + (255 - target.g) * brightness;
+                    data[i+2] = target.b + (255 - target.b) * brightness;
                 }
                 ctx.putImageData(imageData, 0, 0);
                 img.src = canvas.toDataURL();
@@ -171,142 +189,147 @@
             tempImg.src = img.dataset.originalSrc;
         }
 
-        // Ajout d'image avec option de suppression
-        document.getElementById('imageUpload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const container = document.createElement('div');
-                container.className = 'draggable-image-container';
-                container.style.top = '20px';
-                container.style.left = '20px';
-
-                const img = document.createElement('img');
-                img.src = event.target.result;
-                img.className = 'draggable-image';
-                img.style.width = '120px';
-                img.dataset.originalSrc = event.target.result;
-
-                const delBtn = document.createElement('div');
-                delBtn.className = 'delete-btn';
-                delBtn.innerHTML = '×';
-                delBtn.onclick = () => container.remove();
-
-                const handle = document.createElement('div');
-                handle.className = 'resize-handle';
-
-                container.appendChild(delBtn);
-                container.appendChild(img);
-                container.appendChild(handle);
-                document.getElementById('ballot').appendChild(container);
-
-                applyColorToImage(img, document.getElementById('colorPicker').value);
-                makeElementDraggable(container, img, handle);
-                e.target.value = ''; 
-            };
-            reader.readAsDataURL(file);
-        });
-
-        function makeElementDraggable(container, img, handle) {
-            let isDragging = false, isResizing = false;
-            let startX, startY, startW;
-
-            container.onmousedown = function(e) {
-                if(e.target === handle) {
-                    isResizing = true;
-                    startX = e.clientX;
-                    startW = img.offsetWidth;
-                } else if(e.target !== container.querySelector('.delete-btn')) {
-                    isDragging = true;
-                    startX = e.clientX - container.offsetLeft;
-                    startY = e.clientY - container.offsetTop;
-                }
-                if(isDragging || isResizing) e.preventDefault();
-            };
-
-            document.onmousemove = function(e) {
-                if(isDragging) {
-                    container.style.left = (e.clientX - startX) + 'px';
-                    container.style.top = (e.clientY - startY) + 'px';
-                }
-                if(isResizing) {
-                    const width = startW + (e.clientX - startX);
-                    img.style.width = Math.min(600, Math.max(30, width)) + 'px';
-                }
-            };
-
-            document.onmouseup = () => { isDragging = false; isResizing = false; };
-        }
-
         function generateBallot() {
-            const listName = document.getElementById('listName').value || "NOM DE LA LISTE";
-            const muni = document.getElementById('municipalCandidates').value.split('\n').filter(t => t.trim());
-            const commu = document.getElementById('communityCandidates').value.split('\n').filter(t => t.trim());
-            const hasCommu = commu.length > 0;
-            const useNum = document.getElementById('showNumbers').checked;
-            const textColor = document.getElementById('colorPicker').value;
+            const listName = document.getElementById('listName').value;
+            const municipalText = document.getElementById('municipalCandidates').value;
+            if (!listName || !municipalText) return alert("Nom et candidats requis");
 
-            // Garder les images existantes avant de vider
-            const images = Array.from(document.querySelectorAll('.draggable-image-container'));
-            
             const ballot = document.getElementById('ballot');
-            ballot.classList.remove('ballot-a4', 'ballot-a5');
-            ballot.classList.add(muni.length > 30 ? 'ballot-a4' : 'ballot-a5');
+            const municipalCandidates = municipalText.split('\n').filter(l => l.trim());
+            const isA4 = municipalCandidates.length > 31;
             
+            ballot.className = `border-2 border-gray-300 mx-auto relative overflow-hidden ${isA4 ? 'ballot-a4' : 'ballot-a5'}`;
             ballot.style.fontFamily = document.getElementById('fontFamily').value;
-            ballot.style.color = textColor;
-            ballot.style.padding = '15mm';
+            ballot.style.fontSize = document.getElementById('fontSize').value + 'px';
+            ballot.style.color = getCurrentColor();
+            ballot.style.padding = '40px';
 
             ballot.innerHTML = `
-                <div class="text-center mb-10">
-                    <h1 style="font-size: ${document.getElementById('titleSize').value}px; font-weight: bold; line-height:1.1;">${listName}</h1>
+                <div class="text-center mb-6">
+                    <h1 class="font-bold text-xl">${listName}</h1>
                 </div>
-                
-                <div class="flex ${hasCommu ? 'justify-between' : 'justify-center'} gap-12">
-                    <div class="${hasCommu ? 'w-1/2' : 'w-full text-center'}">
-                        <h2 class="font-bold mb-4" style="font-size: ${parseInt(document.getElementById('fontSize').value)+2}px">
-                            Liste des candidats au conseil municipal
-                        </h2>
-                        <div class="grid ${muni.length > 15 ? 'grid-cols-2' : 'grid-cols-1'} gap-x-8 gap-y-1 text-left inline-block">
-                            ${muni.map((c, i) => `<div>${useNum ? (i+1)+'. ' : ''}${c}</div>`).join('')}
-                        </div>
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <h2 class="font-bold mb-2">Conseil Municipal</h2>
+                        ${municipalCandidates.map((c, i) => `<div>${i+1}. ${c}</div>`).join('')}
                     </div>
-
-                    ${hasCommu ? `
-                    <div class="w-1/2">
-                        <h2 class="font-bold mb-4" style="font-size: ${parseInt(document.getElementById('fontSize').value)+2}px">
-                            Liste des candidats communautaires
-                        </h2>
-                        <div class="text-left inline-block">
-                            ${commu.map((c, i) => `<div>${useNum ? (i+1)+'. ' : ''}${c}</div>`).join('')}
-                        </div>
+                    <div>
+                        <h2 class="font-bold mb-2">Conseil Communautaire</h2>
+                        ${document.getElementById('communityCandidates').value.split('\n').filter(l => l.trim()).map((c, i) => `<div>${i+1}. ${c}</div>`).join('')}
                     </div>
-                    ` : ''}
                 </div>
             `;
 
-            // Ré-attacher les images et mettre à jour leur couleur
-            images.forEach(imgCont => {
-                ballot.appendChild(imgCont);
-                applyColorToImage(imgCont.querySelector('img'), textColor);
-            });
+            // Ré-ajouter les images stockées
+            uploadedImages.forEach(imgData => addNewImageToBallot(imgData));
+            document.getElementById('ballotPreview').classList.remove('hidden');
+        }
 
-            document.getElementById('ballotContainer').classList.remove('hidden');
+        function addNewImageToBallot(imgData) {
+            const ballot = document.getElementById('ballot');
+            const id = 'img_' + Date.now();
+            
+            const img = document.createElement('img');
+            img.className = 'draggable-image';
+            img.id = id;
+            img.src = imgData;
+            img.style.top = '20px';
+            img.style.left = '20px';
+            img.style.width = '150px';
+
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
+            handle.id = 'handle_' + id;
+
+            ballot.appendChild(img);
+            ballot.appendChild(handle);
+
+            img.onload = () => {
+                applyColorToImage(img, getCurrentColor());
+                updateHandlePos(img, handle);
+            };
+
+            img.addEventListener('mousedown', e => startDrag(e, img));
+            handle.addEventListener('mousedown', e => startResize(e, img, handle));
+        }
+
+        function updateHandlePos(img, handle) {
+            handle.style.left = (img.offsetLeft + img.offsetWidth - 10) + 'px';
+            handle.style.top = (img.offsetTop + img.offsetHeight - 10) + 'px';
+        }
+
+        function startDrag(e, img) {
+            isDragging = true;
+            activeImg = img;
+            const rect = img.getBoundingClientRect();
+            dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            img.classList.add('dragging');
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            const ballot = document.getElementById('ballot').getBoundingClientRect();
+            let x = e.clientX - ballot.left - dragOffset.x;
+            let y = e.clientY - ballot.top - dragOffset.y;
+            activeImg.style.left = x + 'px';
+            activeImg.style.top = y + 'px';
+            updateHandlePos(activeImg, document.getElementById('handle_' + activeImg.id));
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            if (activeImg) activeImg.classList.remove('dragging');
+            document.removeEventListener('mousemove', drag);
+        }
+
+        function startResize(e, img, handle) {
+            isResizing = true;
+            activeImg = img;
+            resizeStartSize = { w: img.offsetWidth, h: img.offsetHeight };
+            resizeStartPos = { x: e.clientX, y: e.clientY };
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function resize(e) {
+            if (!isResizing) return;
+            const ratio = resizeStartSize.w / resizeStartSize.h;
+            const deltaX = e.clientX - resizeStartPos.x;
+            // Taille max augmentée à 800px
+            let newW = Math.max(30, Math.min(800, resizeStartSize.w + deltaX));
+            activeImg.style.width = newW + 'px';
+            activeImg.style.height = (newW / ratio) + 'px';
+            updateHandlePos(activeImg, document.getElementById('handle_' + activeImg.id));
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
         }
 
         async function generatePDF() {
             const ballot = document.getElementById('ballot');
-            const canvas = await html2canvas(ballot, { scale: 3, useCORS: true });
-            const pdf = new jspdf.jsPDF({
-                orientation: 'landscape',
-                unit: 'mm',
-                format: ballot.classList.contains('ballot-a4') ? 'a4' : 'a5'
-            });
+            const canvas = await html2canvas(ballot, { scale: 2 });
+            const { jsPDF } = window.jspdf;
+            const orientation = ballot.classList.contains('ballot-a4') ? 'l' : 'l';
+            const format = ballot.classList.contains('ballot-a4') ? 'a4' : 'a5';
+            const pdf = new jsPDF(orientation, 'mm', format);
             pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
-            pdf.save("bulletin-vote.pdf");
+            pdf.save("bulletin.pdf");
         }
+
+        // Sync couleur
+        document.getElementById('colorPicker').addEventListener('input', function(e) {
+            const color = e.target.value;
+            document.getElementById('colorHex').value = color;
+            document.getElementById('ballot').style.color = color;
+            document.querySelectorAll('.draggable-image').forEach(img => applyColorToImage(img, color));
+        });
     </script>
 </body>
 </html>
